@@ -8,7 +8,7 @@ export default function AudienceView() {
   const agent = useAgent<PresentationState>({
     agent: 'presentation-agent',
     onStateUpdate(state) {
-      setReactions(state.availableReactions);
+      setReactions(state.currentSlide?.availableReactions ?? []);
     },
   });
 
@@ -48,4 +48,3 @@ export default function AudienceView() {
     </div>
   );
 }
-

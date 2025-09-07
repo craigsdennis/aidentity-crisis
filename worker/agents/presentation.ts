@@ -3,15 +3,23 @@
 import { Agent } from "agents";
 import { unstable_callable as callable } from "agents";
 
+export type Slide = {
+  body: string;
+  availableReactions: string[];
+}
+
 export type PresentationState = {
   currentSlideIndex: number;
-  availableReactions: string[];
+  currentSlide: Slide;
 };
 
 export class PresentationAgent extends Agent<Env, PresentationState> {
   initialState = {
     currentSlideIndex: 0,
-    availableReactions: ["🧡", "😎", "🤷‍♂️"]
+    currentSlide: {
+      body: "# This is the first slide",
+      availableReactions: ["🧡", "😎", "🤷‍♂️"]
+    },
   };
 
   onStart() {
@@ -43,12 +51,28 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
 
   @callable()
   async storeReaction(reaction: string) {
-    if (this.state.availableReactions.includes(reaction)) {
+    if (this.state.currentSlide.availableReactions.includes(reaction)) {
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         this
           .sql`INSERT INTO slide_reactions (slide_index, reaction) VALUES (${this.state.currentSlideIndex}, ${reaction})`;
     } else {
         console.warn(`Reaction ${reaction} was not available`);
     }
+  }
+
+  @callable()
+  async setSlide(index: number, availableReactions: string[]) {
+    const bounded = Math.max(0, Math.floor(index));
+    const reactions = Array.isArray(availableReactions) && availableReactions.length > 0
+      ? availableReactions
+      : this.state.currentSlide.availableReactions;
+    this.setState({
+      ...this.state,
+      currentSlideIndex: bounded,
+      currentSlide: {
+        ...this.state.currentSlide,
+        availableReactions: reactions,
+      },
+    });
   }
 }

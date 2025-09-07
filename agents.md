@@ -91,3 +91,11 @@ Recommended practice
 - Slide content: bind actual slide data/components to `currentSlideIndex`.
 - Analytics: simple view to query/download `slide_reactions` by slide and time.
 
+## Dynamic slides (MDX)
+- Author slides in `src/slides/*.mdx`.
+- Each MDX file can export `meta` with:
+  - `background: string` — URL to background image.
+  - `reactions: string[]` — available reactions for that slide.
+  - `title?: string` — optional title.
+- The presenter view renders current slide within `SlideFrame` (default slide styling) and updates the agent via `setSlide(index, reactions)` so the audience’s available reactions match the active slide.
+- Indexing is handled by `src/slides/index.tsx` using `import.meta.glob`.

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAgent } from 'agents/react';
 import type { PresentationState } from '../../worker/agents/presentation';
 import QRCode from '../components/QRCode';
+import { slides } from '../slides';
+import SlideFrame from '../components/SlideFrame';
 
 export default function PresenterView() {
   const [slideNumber, setSlideNumber] = useState(0);
@@ -20,43 +22,77 @@ export default function PresenterView() {
     return url.toString();
   }, []);
 
+  // Apply current slide index from agent
   useEffect(() => {
+    // On initial mount, ensure agent reactions match slide 0
+    const meta = slides[0]?.meta;
+    if (meta) void agent.stub.setSlide(0, meta.reactions);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    function setByDelta(delta: number) {
+      const total = slides.length;
+      if (total === 0) return;
+      const next = Math.min(Math.max(slideNumber + delta, 0), total - 1);
+      const meta = slides[next]?.meta;
+      if (meta) void agent.stub.setSlide(next, meta.reactions);
+    }
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        // advance slide
-        void agent.stub.nextSlide();
+        setByDelta(1);
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        // go back a slide
-        void agent.stub.prevSlide();
+        setByDelta(-1);
       }
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [agent.stub]);
+  }, [agent.stub, slideNumber]);
+
+  const total = slides.length;
+  const current = slides[slideNumber];
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-8 p-6 text-slate-100 bg-slate-900">
-      <div className="text-5xl font-semibold">Slide {slideNumber}</div>
-      <div className="flex gap-4">
-        <button
-          className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600"
-          onClick={() => agent.stub.prevSlide()}
-        >
-          ← Prev
-        </button>
-        <button
-          className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500"
-          onClick={() => agent.stub.nextSlide()}
-        >
-          Next →
-        </button>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6 text-slate-100 bg-slate-900">
+      <div className="w-full max-w-[1200px] flex items-center justify-between">
+        <div className="text-2xl font-semibold">Slide {slideNumber + 1} / {total}</div>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600"
+            onClick={() => {
+              const next = Math.max(0, slideNumber - 1);
+              const meta = slides[next]?.meta;
+              if (meta) void agent.stub.setSlide(next, meta.reactions);
+            }}
+          >
+            ← Prev
+          </button>
+          <button
+            className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500"
+            onClick={() => {
+              const next = Math.min(total - 1, slideNumber + 1);
+              const meta = slides[next]?.meta;
+              if (meta) void agent.stub.setSlide(next, meta.reactions);
+            }}
+          >
+            Next →
+          </button>
+        </div>
       </div>
 
-      <div className="mt-10 flex flex-col items-center gap-2">
+      {current ? (
+        <SlideFrame background={current.meta.background}>
+          <current.Component />
+        </SlideFrame>
+      ) : (
+        <div className="text-slate-400">No slides found</div>
+      )}
+
+      <div className="mt-4 flex flex-col items-center gap-2">
         <div className="text-lg text-slate-300">Audience: scan to react</div>
-        <QRCode value={audienceUrl} size={256} className="rounded bg-white p-2" />
+        <QRCode value={audienceUrl} size={220} className="rounded bg-white p-2" />
         <a
           href={audienceUrl}
           className="text-sm text-indigo-300 hover:underline break-all"
@@ -68,4 +104,3 @@ export default function PresenterView() {
     </div>
   );
 }
-
