@@ -51,56 +51,25 @@ export default function PresenterView() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [agent.stub, slideNumber]);
 
-  const total = slides.length;
   const current = slides[slideNumber];
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6 text-slate-100 bg-slate-900">
-      <div className="w-full max-w-[1200px] flex items-center justify-between">
-        <div className="text-2xl font-semibold">Slide {slideNumber + 1} / {total}</div>
-        <div className="flex gap-2">
-          <button
-            className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600"
-            onClick={() => {
-              const next = Math.max(0, slideNumber - 1);
-              const meta = slides[next]?.meta;
-              if (meta) void agent.stub.setSlide(next, meta.reactions);
-            }}
-          >
-            ← Prev
-          </button>
-          <button
-            className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500"
-            onClick={() => {
-              const next = Math.min(total - 1, slideNumber + 1);
-              const meta = slides[next]?.meta;
-              if (meta) void agent.stub.setSlide(next, meta.reactions);
-            }}
-          >
-            Next →
-          </button>
-        </div>
-      </div>
-
+    <div className="h-screen w-screen">
       {current ? (
-        <SlideFrame background={current.meta.background}>
+        <SlideFrame
+          background={current.meta.background}
+          overlayBottomRight={
+            <div className="flex flex-col items-center gap-2">
+              <div className="text-sm text-slate-200/80">Audience: scan to react</div>
+              <QRCode value={audienceUrl} size={180} className="rounded bg-white p-2 shadow-xl" />
+            </div>
+          }
+        >
           <current.Component />
         </SlideFrame>
       ) : (
-        <div className="text-slate-400">No slides found</div>
+        <div className="text-slate-400 h-screen w-screen flex items-center justify-center">No slides found</div>
       )}
-
-      <div className="mt-4 flex flex-col items-center gap-2">
-        <div className="text-lg text-slate-300">Audience: scan to react</div>
-        <QRCode value={audienceUrl} size={220} className="rounded bg-white p-2" />
-        <a
-          href={audienceUrl}
-          className="text-sm text-indigo-300 hover:underline break-all"
-        >
-          {audienceUrl}
-        </a>
-      </div>
-      <div className="text-xs text-slate-500">Use left/right arrows or buttons</div>
     </div>
   );
 }
