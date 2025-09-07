@@ -1,25 +1,20 @@
-import { useState } from 'react'
-import './App.css'
-import { useAgent } from 'agents/react'
-import type {PresentationAgent, PresentationState} from '../worker/agents/presentation';
+import { useEffect, useState } from 'react';
+import './App.css';
+import PresenterView from './views/PresenterView';
+import AudienceView from './views/AudienceView';
 
 function App() {
-  const [slideNumber, setSlideNumber] = useState(0)
-  const agent = useAgent<PresentationState>({
-    agent: "presentation-agent",
-    onStateUpdate(state) {
-      setSlideNumber(state.currentSlideIndex);
-    }
-  });
-  async function advanceSlide() {
-    await agent.stub.nextSlide();
-  }
-  return (
-    <>
-    Slide: {slideNumber}
-    <button onClick={advanceSlide}>Next Slide</button>
-    </>
-  )
+  const [path, setPath] = useState<string>(window.location.pathname);
+
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  if (path.startsWith('/audience')) return <AudienceView />;
+  // default to presenter view
+  return <PresenterView />;
 }
 
-export default App
+export default App;

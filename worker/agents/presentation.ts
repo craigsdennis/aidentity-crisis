@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="../../worker-configuration.d.ts" />
 import { Agent } from "agents";
 import { unstable_callable as callable } from "agents";
 
@@ -27,6 +29,15 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
     this.setState({
       ...this.state,
       currentSlideIndex: this.state.currentSlideIndex + 1,
+    });
+  }
+
+  @callable()
+  async prevSlide() {
+    const nextIndex = Math.max(0, this.state.currentSlideIndex - 1);
+    this.setState({
+      ...this.state,
+      currentSlideIndex: nextIndex,
     });
   }
 
