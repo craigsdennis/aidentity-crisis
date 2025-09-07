@@ -24,6 +24,11 @@ function sortByPath([a]: [string, SlideModule], [b]: [string, SlideModule]) {
 }
 
 export const slides: Slide[] = Object.entries(modules)
+  // ignore any MDX file whose basename starts with an underscore
+  .filter(([path]) => {
+    const base = path.split('/').pop() || path;
+    return !base.startsWith('_');
+  })
   .sort(sortByPath)
   .map(([path, mod]) => {
     const meta: SlideMeta = mod.meta ?? {};
@@ -36,4 +41,3 @@ export const slides: Slide[] = Object.entries(modules)
       },
     } satisfies Slide;
   });
-
