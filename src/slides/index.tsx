@@ -4,6 +4,8 @@ export type SlideMeta = {
   title?: string;
   reactions?: string[];
   background?: string;
+  // Opt-in: show live reaction counters on this slide
+  showLiveReactions?: boolean;
 };
 
 export type SlideModule = {
