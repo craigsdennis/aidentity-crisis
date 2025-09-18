@@ -6,6 +6,8 @@ export type SlideMeta = {
   background?: string;
   // Opt-in: show live reaction counters on this slide
   showLiveReactions?: boolean;
+  // Optional per-slide audio transition clips (served from /public)
+  audioTransitions?: string[];
 };
 
 export type SlideModule = {

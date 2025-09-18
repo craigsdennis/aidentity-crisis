@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAgent } from 'agents/react';
 import type { PresentationState } from '../../worker/agents/presentation';
 import QRCode from '../components/QRCode';
@@ -9,6 +9,10 @@ export default function PresenterView() {
   const [slideNumber, setSlideNumber] = useState(0);
   const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
   const [showLiveReactions, setShowLiveReactions] = useState(false);
+  // Track how many audio clips have been consumed per slide (fragment-like)
+  const [audioProgress, setAudioProgress] = useState<Record<number, number>>({});
+  const isPlayingRef = useRef(false);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const agent = useAgent<PresentationState>({
     agent: 'presentation-agent',
     onStateUpdate(state) {
@@ -31,6 +35,8 @@ export default function PresenterView() {
     // On initial mount, ensure agent reactions match slide 0
     const meta = slides[0]?.meta;
     if (meta) void agent.stub.setSlide(0, meta.reactions, Boolean(meta.showLiveReactions));
+    // Initialize audio progress for slide 0
+    setAudioProgress((prev) => ({ ...prev, 0: 0 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -38,22 +44,98 @@ export default function PresenterView() {
     function setByDelta(delta: number) {
       const total = slides.length;
       if (total === 0) return;
-      const next = Math.min(Math.max(slideNumber + delta, 0), total - 1);
-      const meta = slides[next]?.meta;
-      if (meta) void agent.stub.setSlide(next, meta.reactions, Boolean(meta.showLiveReactions));
+
+      // Helper accessors
+      const getClips = (index: number) => slides[index]?.meta?.audioTransitions ?? [];
+      const normalizeSrc = (src: string) => (/^https?:\/\//.test(src) || src.startsWith('/') ? src : `/${src}`);
+      const stopCurrentAudio = () => {
+        const a = currentAudioRef.current;
+        if (a) {
+          try {
+            a.pause();
+          } catch {}
+          try {
+            a.currentTime = 0;
+          } catch {}
+        }
+        currentAudioRef.current = null;
+        isPlayingRef.current = false;
+      };
+      const playClip = (slideIndex: number, clipIndex: number, nextProgressValue: number) => {
+        if (isPlayingRef.current) return; // ignore if currently playing
+        const clips = getClips(slideIndex);
+        const src = clips[clipIndex];
+        if (!src) return;
+        stopCurrentAudio();
+        const audio = new Audio(normalizeSrc(src));
+        currentAudioRef.current = audio;
+        isPlayingRef.current = true;
+        const onEnded = () => {
+          isPlayingRef.current = false;
+          setAudioProgress((prev) => ({ ...prev, [slideIndex]: nextProgressValue }));
+          audio.removeEventListener('ended', onEnded);
+          // clean ref only if it's still this audio
+          if (currentAudioRef.current === audio) currentAudioRef.current = null;
+        };
+        audio.addEventListener('ended', onEnded);
+        // Start playback; errors (e.g., autoplay restrictions) will leave playing state cleared
+        audio.play().catch(() => {
+          isPlayingRef.current = false;
+          audio.removeEventListener('ended', onEnded);
+          if (currentAudioRef.current === audio) currentAudioRef.current = null;
+        });
+      };
+
+      // If audio is playing, ignore navigation until finished
+      if (isPlayingRef.current) return;
+
+      const clips = getClips(slideNumber);
+      const progressed = audioProgress[slideNumber] ?? 0;
+
+      if (delta > 0) {
+        // Forward: play next clip if available; else advance slide
+        if (progressed < clips.length) {
+          playClip(slideNumber, progressed, progressed + 1);
+          return;
+        }
+        const next = Math.min(slideNumber + 1, total - 1);
+        if (next !== slideNumber) {
+          // Stop any current audio and reset playing flag
+          stopCurrentAudio();
+          // Initialize next slide audio progress to 0 if unset
+          setAudioProgress((prev) => (prev[next] == null ? { ...prev, [next]: 0 } : prev));
+          const meta = slides[next]?.meta;
+          if (meta) void agent.stub.setSlide(next, meta.reactions, Boolean(meta.showLiveReactions));
+        }
+      } else if (delta < 0) {
+        // Backward: if we have progressed clips, step back and play that clip
+        if (progressed > 0) {
+          playClip(slideNumber, progressed - 1, progressed - 1);
+          return;
+        }
+        const prevIndex = Math.max(slideNumber - 1, 0);
+        if (prevIndex !== slideNumber) {
+          stopCurrentAudio();
+          const prevClips = getClips(prevIndex);
+          // Enter previous slide at its last clip progressed (like last fragment)
+          setAudioProgress((prev) => ({ ...prev, [prevIndex]: prevClips.length }));
+          const meta = slides[prevIndex]?.meta;
+          if (meta) void agent.stub.setSlide(prevIndex, meta.reactions, Boolean(meta.showLiveReactions));
+        }
+      }
     }
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'ArrowRight') {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
         e.preventDefault();
         setByDelta(1);
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         e.preventDefault();
         setByDelta(-1);
       }
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [agent.stub, slideNumber]);
+  }, [agent.stub, slideNumber, audioProgress]);
 
   const current = slides[slideNumber];
 

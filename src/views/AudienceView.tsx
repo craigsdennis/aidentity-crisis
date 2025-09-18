@@ -1,20 +1,51 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAgent } from 'agents/react';
 import type { PresentationState } from '../../worker/agents/presentation';
 
 export default function AudienceView() {
   const [reactions, setReactions] = useState<string[]>([]);
   const [justSent, setJustSent] = useState<string | null>(null);
+  const [slideIndex, setSlideIndex] = useState<number>(0);
   const agent = useAgent<PresentationState>({
     agent: 'presentation-agent',
     onStateUpdate(state) {
       setReactions(state.currentSlide?.availableReactions ?? []);
+      setSlideIndex(state.currentSlideIndex ?? 0);
     },
   });
+
+  // LocalStorage helpers for per-slide reaction counts
+  const storageKey = useMemo(() => 'audience_reactions', []);
+  function loadCounts(): Record<string, Record<string, number>> {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      return raw ? (JSON.parse(raw) as Record<string, Record<string, number>>) : {};
+    } catch {
+      return {};
+    }
+  }
+  function saveCounts(data: Record<string, Record<string, number>>) {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(data));
+    } catch {
+      // ignore write errors (e.g., storage full/private mode)
+    }
+  }
 
   async function sendReaction(r: string) {
     await agent.stub.storeReaction(r);
     setJustSent(r);
+    // Persist locally: increment count for this slide + emoji
+    try {
+      const all = loadCounts();
+      const key = String(slideIndex ?? 0);
+      const perSlide = all[key] ?? {};
+      perSlide[r] = (perSlide[r] ?? 0) + 1;
+      all[key] = perSlide;
+      saveCounts(all);
+    } catch {
+      // ignore storage failures
+    }
     // clear feedback after short delay
     window.setTimeout(() => setJustSent(null), 800);
   }
