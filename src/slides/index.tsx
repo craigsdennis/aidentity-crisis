@@ -8,6 +8,8 @@ export type SlideMeta = {
   showLiveReactions?: boolean;
   // Optional per-slide audio transition clips (served from /public)
   audioTransitions?: string[];
+  // Optional per-slide hand action commands aligned with audio transitions
+  handActions?: Array<string | number>;
 };
 
 export type SlideModule = {
