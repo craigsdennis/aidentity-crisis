@@ -40,7 +40,12 @@ export default function PresenterView() {
   useEffect(() => {
     // On initial mount, ensure agent reactions match slide 0
     const meta = slides[0]?.meta;
-    if (meta) void agent.stub.setSlide(0, meta.reactions, Boolean(meta.showLiveReactions));
+    if (meta) {
+      void agent.stub.setSlide(0, meta.reactions, {
+        showLiveReactions: Boolean(meta.showLiveReactions),
+        title: meta.title ?? null,
+      });
+    }
     // Initialize fragment progress for slide 0
     setFragmentProgress((prev) => ({ ...prev, 0: 0 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,7 +176,12 @@ export default function PresenterView() {
           stopCurrentAudio();
           setFragmentProgress((prev) => (prev[next] == null ? { ...prev, [next]: 0 } : prev));
           const meta = slides[next]?.meta;
-          if (meta) void agent.stub.setSlide(next, meta.reactions, Boolean(meta.showLiveReactions));
+          if (meta) {
+            void agent.stub.setSlide(next, meta.reactions, {
+              showLiveReactions: Boolean(meta.showLiveReactions),
+              title: meta.title ?? null,
+            });
+          }
         }
       } else if (delta < 0) {
         if (progressed > 0) {
@@ -196,7 +206,12 @@ export default function PresenterView() {
             [prevIndex]: Math.max(prevClips.length, prevActions.length),
           }));
           const meta = slides[prevIndex]?.meta;
-          if (meta) void agent.stub.setSlide(prevIndex, meta.reactions, Boolean(meta.showLiveReactions));
+          if (meta) {
+            void agent.stub.setSlide(prevIndex, meta.reactions, {
+              showLiveReactions: Boolean(meta.showLiveReactions),
+              title: meta.title ?? null,
+            });
+          }
         }
       }
     };

@@ -6,7 +6,8 @@ import { unstable_callable as callable } from "agents";
 export type Slide = {
   body: string;
   availableReactions: string[];
-}
+  title?: string | null;
+};
 
 export type PresentationState = {
   currentSlideIndex: number;
@@ -21,7 +22,8 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
     currentSlideIndex: 0,
     currentSlide: {
       body: "# This is the first slide",
-      availableReactions: ["🧡", "😎", "🤷‍♂️"]
+      availableReactions: ["🧡", "😎", "🤷‍♂️"],
+      title: "Welcome",
     },
     reactionCounts: {},
     showLiveReactions: false,
@@ -78,12 +80,20 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
   }
 
   @callable()
-  async setSlide(index: number, availableReactions: string[], showLiveReactions?: boolean) {
+  async setSlide(
+    index: number,
+    availableReactions: string[],
+    options?: {
+      showLiveReactions?: boolean;
+      title?: string | null;
+    },
+  ) {
     const bounded = Math.max(0, Math.floor(index));
     const reactions = Array.isArray(availableReactions) && availableReactions.length > 0
       ? availableReactions
       : this.state.currentSlide.availableReactions;
-    const show = Boolean(showLiveReactions);
+    const show = Boolean(options?.showLiveReactions);
+    const title = options?.title ?? this.state.currentSlide.title ?? null;
     const counts = show
       ? this._countsForSlide(bounded, reactions)
       : {};
@@ -93,6 +103,7 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
       currentSlide: {
         ...this.state.currentSlide,
         availableReactions: reactions,
+        title,
       },
       reactionCounts: counts,
       showLiveReactions: show,
