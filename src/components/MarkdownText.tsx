@@ -22,7 +22,8 @@ function formatInline(raw: string): string {
   result = result.replace(/\[([^\]]+)]\(([^)]+)\)/g, (_match, label: string, rawUrl: string) => {
     const href = sanitizeUrl(rawUrl);
     if (!href) return label;
-    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    const classes = 'text-emerald-300 underline decoration-2 underline-offset-4 hover:text-emerald-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-300 focus-visible:outline-offset-2';
+    return `<a href="${href}" class="${classes}" target="_blank" rel="noopener noreferrer">${label}</a>`;
   });
   return result;
 }
