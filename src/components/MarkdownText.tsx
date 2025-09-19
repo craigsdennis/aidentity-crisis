@@ -19,7 +19,18 @@ function formatInline(raw: string): string {
     .replace(/`(.+?)`/g, '<code>$1</code>');
   result = result.replace(/(^|[^*])\*(?!\*)([^*]+?)\*(?!\*)/g, (_match, prefix: string, value: string) => `${prefix}<em>${value}</em>`);
   result = result.replace(/(^|[^_])_(?!_)([^_]+?)_(?!_)/g, (_match, prefix: string, value: string) => `${prefix}<em>${value}</em>`);
+  result = result.replace(/\[([^\]]+)]\(([^)]+)\)/g, (_match, label: string, rawUrl: string) => {
+    const href = sanitizeUrl(rawUrl);
+    if (!href) return label;
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  });
   return result;
+}
+
+function sanitizeUrl(url: string): string | null {
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return null;
+  return escapeHtml(trimmed);
 }
 
 function toHtml(markdown: string): string {

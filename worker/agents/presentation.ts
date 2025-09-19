@@ -93,7 +93,10 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
       ? availableReactions
       : this.state.currentSlide.availableReactions;
     const show = Boolean(options?.showLiveReactions);
-    const title = options?.title ?? this.state.currentSlide.title ?? null;
+    let title = this.state.currentSlide.title ?? null;
+    if (options && Object.prototype.hasOwnProperty.call(options, 'title')) {
+      title = options.title ?? null;
+    }
     const counts = show
       ? this._countsForSlide(bounded, reactions)
       : {};
