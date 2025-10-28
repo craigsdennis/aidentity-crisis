@@ -15,6 +15,7 @@ export type PresentationState = {
   // When enabled for a slide, map of emoji -> count
   reactionCounts: Record<string, number>;
   showLiveReactions: boolean;
+  totalTomatoes: number;
 };
 
 export class PresentationAgent extends Agent<Env, PresentationState> {
@@ -27,6 +28,7 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
     },
     reactionCounts: {},
     showLiveReactions: false,
+    totalTomatoes: 0,
   };
 
   onStart() {
@@ -37,6 +39,12 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
             reaction TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );`;
+
+    const totalTomatoes = this._totalTomatoes();
+    this.setState({
+      ...this.state,
+      totalTomatoes,
+    });
   }
 
   @callable()
@@ -63,17 +71,22 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
         this
           .sql`INSERT INTO slide_reactions (slide_index, reaction) VALUES (${this.state.currentSlideIndex}, ${reaction})`;
 
+        const totalTomatoes = this._totalTomatoes();
+        let reactionCounts = this.state.reactionCounts;
+
         // If we're showing live reactions for this slide, refresh counts
         if (this.state.showLiveReactions) {
-          const counts = this._countsForSlide(
+          reactionCounts = this._countsForSlide(
             this.state.currentSlideIndex,
             this.state.currentSlide.availableReactions,
           );
-          this.setState({
-            ...this.state,
-            reactionCounts: counts,
-          });
         }
+
+        this.setState({
+          ...this.state,
+          reactionCounts,
+          totalTomatoes,
+        });
     } else {
         console.warn(`Reaction ${reaction} was not available`);
     }
@@ -100,6 +113,7 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
     const counts = show
       ? this._countsForSlide(bounded, reactions)
       : {};
+    const totalTomatoes = this._totalTomatoes();
     this.setState({
       ...this.state,
       currentSlideIndex: bounded,
@@ -110,6 +124,7 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
       },
       reactionCounts: counts,
       showLiveReactions: show,
+      totalTomatoes,
     });
   }
 
@@ -132,5 +147,16 @@ export class PresentationAgent extends Agent<Env, PresentationState> {
       }
     }
     return base;
+  }
+
+  private _totalTomatoes(): number {
+    const rows = this.sql<{ count: number }>`
+      SELECT COUNT(*) as count
+      FROM slide_reactions
+      WHERE reaction = '🍅'
+    `;
+    if (!rows || rows.length === 0) return 0;
+    const first = rows[0];
+    return Number(first?.count ?? 0);
   }
 }

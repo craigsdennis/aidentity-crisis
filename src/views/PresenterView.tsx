@@ -5,11 +5,13 @@ import QRCode from '../components/QRCode';
 import { slides } from '../slides';
 import SlideFrame from '../components/SlideFrame';
 import { Hand } from '../hand';
+import { PresenterDataProvider } from '../context/PresenterDataContext';
 
 export default function PresenterView() {
   const [slideNumber, setSlideNumber] = useState(0);
   const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
   const [showLiveReactions, setShowLiveReactions] = useState(false);
+  const [totalTomatoes, setTotalTomatoes] = useState(0);
   // Track how many combined audio/action fragments have been consumed per slide
   const [fragmentProgress, setFragmentProgress] = useState<Record<number, number>>({});
   const isPlayingRef = useRef(false);
@@ -25,6 +27,7 @@ export default function PresenterView() {
       setSlideNumber(state.currentSlideIndex);
       setReactionCounts(state.reactionCounts ?? {});
       setShowLiveReactions(Boolean(state.showLiveReactions));
+      setTotalTomatoes(state.totalTomatoes ?? 0);
     },
   });
 
@@ -254,9 +257,12 @@ export default function PresenterView() {
 
   const current = slides[slideNumber];
 
+  const presenterData = useMemo(() => ({ totalTomatoes }), [totalTomatoes]);
+
   return (
-    <div className="h-screen w-screen">
-      {current ? (
+    <PresenterDataProvider value={presenterData}>
+      <div className="h-screen w-screen">
+        {current ? (
         <SlideFrame
           background={current.meta.background}
           overlayBottomRight={
@@ -302,9 +308,10 @@ export default function PresenterView() {
         >
           <current.Component />
         </SlideFrame>
-      ) : (
-        <div className="text-slate-400 h-screen w-screen flex items-center justify-center">No slides found</div>
-      )}
-    </div>
+        ) : (
+          <div className="text-slate-400 h-screen w-screen flex items-center justify-center">No slides found</div>
+        )}
+      </div>
+    </PresenterDataProvider>
   );
 }
