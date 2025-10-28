@@ -1,4 +1,4 @@
-# AIdenity Crisis
+# AIdentity Crisis
 
 [<img src="https://img.youtube.com/vi/nKgCVE-1tPg/0.jpg">](https://youtu.be/nKgCVE-1tPg "AIdentity Crisis - CascadiaJS")
 
