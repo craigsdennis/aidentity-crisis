@@ -9,7 +9,8 @@
 		"lint": "eslint .",
 		"preview": "npm run build && vite preview",
 		"deploy": "npm run build && wrangler deploy",
-		"cf-typegen": "wrangler types"
+		"cf-typegen": "wrangler types",
+		"verify:slides": "node scripts/verify-slides.mjs"
 	},
 	"dependencies": {
 		"@mdx-js/react": "^3.0.1",

@@ -134,17 +134,23 @@ export default function PresenterView() {
       currentAudioRef.current = audio;
       isPlayingRef.current = true;
       if (nextAction !== undefined && nextAction !== null) triggerHandAction(nextAction);
-      const onEnded = () => {
+      const finish = () => {
         isPlayingRef.current = false;
         setFragmentProgress((prev) => ({ ...prev, [slideIndex]: nextProgressValue }));
         audio.removeEventListener('ended', onEnded);
+        audio.removeEventListener('error', onError);
         if (currentAudioRef.current === audio) currentAudioRef.current = null;
       };
+      const onEnded = () => {
+        finish();
+      };
+      const onError = () => {
+        finish();
+      };
       audio.addEventListener('ended', onEnded);
+      audio.addEventListener('error', onError);
       audio.play().catch(() => {
-        isPlayingRef.current = false;
-        audio.removeEventListener('ended', onEnded);
-        if (currentAudioRef.current === audio) currentAudioRef.current = null;
+        finish();
       });
     };
 
