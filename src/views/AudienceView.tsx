@@ -2,12 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAgent } from 'agents/react';
 import type { PresentationState } from '../../worker/agents/presentation';
 import MarkdownText from '../components/MarkdownText';
+import { slides } from '../slides';
 
 export default function AudienceView() {
   const [reactions, setReactions] = useState<string[]>([]);
   const [justSent, setJustSent] = useState<string | null>(null);
   const [slideIndex, setSlideIndex] = useState<number>(0);
   const [title, setTitle] = useState<string | null>(null);
+  const finalSlideIndex = slides.length > 0 ? slides.length - 1 : 0;
+  const smsHref = useMemo(
+    () =>
+      `sms:?&body=${encodeURIComponent(
+        'Hey I just saw this conference talk about AI. You should totally watch https://aiavenue.show with me.',
+      )}`,
+    [],
+  );
   const agent = useAgent<PresentationState>({
     agent: 'presentation-agent',
     onStateUpdate(state) {
@@ -59,6 +68,7 @@ export default function AudienceView() {
   }, []);
 
   const hasTitle = typeof title === 'string' && title.trim().length > 0;
+  const onFinalSlide = slideIndex >= finalSlideIndex;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-8 p-6 text-slate-100 bg-slate-900">
@@ -86,6 +96,14 @@ export default function AudienceView() {
         <div className="px-3 py-1 rounded bg-emerald-700 text-emerald-50">
           Sent {justSent}
         </div>
+      )}
+      {onFinalSlide && (
+        <a
+          href={smsHref}
+          className="inline-flex items-center justify-center rounded-lg bg-rose-500 px-5 py-3 font-semibold text-white shadow transition hover:bg-rose-600"
+        >
+          Send someone a text message about AI Avenue
+        </a>
       )}
     </div>
   );
