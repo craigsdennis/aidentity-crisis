@@ -154,10 +154,17 @@ export default function PresenterView() {
       });
     };
 
-    const setByDelta = (delta: number) => {
+    const setByDelta = (delta: number, options?: { skipFragments?: boolean }) => {
+      const skipFragments = options?.skipFragments ?? false;
       const total = slides.length;
       if (total === 0) return;
-      if (isPlayingRef.current) return;
+      if (isPlayingRef.current) {
+        if (skipFragments) {
+          stopCurrentAudio();
+        } else {
+          return;
+        }
+      }
 
       const clips = getClips(slideNumber);
       const actions = getHandActions(slideNumber);
@@ -165,7 +172,7 @@ export default function PresenterView() {
       const totalFragments = Math.max(clips.length, actions.length);
 
       if (delta > 0) {
-        if (progressed < totalFragments) {
+        if (!skipFragments && progressed < totalFragments) {
           const fragmentIndex = progressed;
           const actionForStep = actions[fragmentIndex];
           const clipForStep = clips[fragmentIndex];
@@ -180,7 +187,15 @@ export default function PresenterView() {
         const next = Math.min(slideNumber + 1, total - 1);
         if (next !== slideNumber) {
           stopCurrentAudio();
-          setFragmentProgress((prev) => (prev[next] == null ? { ...prev, [next]: 0 } : prev));
+          setFragmentProgress((prev) => {
+            const nextInitNeeded = prev[next] == null;
+            const updated: typeof prev = {
+              ...prev,
+              [slideNumber]: totalFragments,
+            };
+            if (nextInitNeeded) updated[next] = 0;
+            return updated;
+          });
           const meta = slides[next]?.meta;
           if (meta) {
             void agent.stub.setSlide(next, meta.reactions, {
@@ -190,7 +205,7 @@ export default function PresenterView() {
           }
         }
       } else if (delta < 0) {
-        if (progressed > 0) {
+        if (!skipFragments && progressed > 0) {
           const fragmentIndex = progressed - 1;
           const actionForStep = actions[fragmentIndex];
           const clipForStep = clips[fragmentIndex];
@@ -209,6 +224,7 @@ export default function PresenterView() {
           const prevActions = getHandActions(prevIndex);
           setFragmentProgress((prev) => ({
             ...prev,
+            [slideNumber]: 0,
             [prevIndex]: Math.max(prevClips.length, prevActions.length),
           }));
           const meta = slides[prevIndex]?.meta;
@@ -225,10 +241,10 @@ export default function PresenterView() {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === 'PageDown') {
         e.preventDefault();
-        setByDelta(1);
+        setByDelta(1, { skipFragments: e.shiftKey });
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         e.preventDefault();
-        setByDelta(-1);
+        setByDelta(-1, { skipFragments: e.shiftKey });
       }
     };
 
